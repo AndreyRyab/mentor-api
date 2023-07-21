@@ -10,12 +10,15 @@ module.exports = (req, res, next) => {
     throw new AuthError(ERROR_AUTH_MESSAGE);
   }
   const token = req.cookies.jwt;
+
   let payload;
+  
   try {
     payload = jwt.verify(token, JWT_SECRET);
   } catch (err) {
     throw new AuthError(ERROR_AUTH_MESSAGE);
   }
   req.user = payload;
+  
   next();
 };
