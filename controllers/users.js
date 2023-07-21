@@ -62,12 +62,12 @@ module.exports.login = async (req, res) => {
   let user;
   try {
     user = await User.findOne({ email }).select('+password');
-  } catch ({ message }) {
+  } catch (err) {
     if (err.name === 'CastError') {
       throw new BadRequestError(ERROR_BAD_REQUEST_MESSAGE);
     }
 
-    throw new Error(message);
+    throw new Error(err.message);
   }
 
   if (!user) {
