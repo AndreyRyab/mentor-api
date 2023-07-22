@@ -44,7 +44,7 @@ module.exports.createUser = async (req, res) => {
       res.cookie('jwt', token, {
         maxAge: 3600000 * 24 * 7,
         httpOnly: true,
-        sameSite: true,
+        sameSite: false,
         secure: true,
       });
 
@@ -87,7 +87,7 @@ module.exports.login = async (req, res) => {
   res.cookie('jwt', token, {
     maxAge: 3600000 * 24 * 7,
     httpOnly: true,
-    sameSite: true,
+    sameSite: false,
     secure: true,
   })
 
