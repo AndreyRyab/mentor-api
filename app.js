@@ -17,7 +17,6 @@ const allowedCors = ['http://localhost:8080'];
 
 const app = express();
 
-app.use(express.json());
 app.use(limiter);
 app.use(requestLogger);
 
