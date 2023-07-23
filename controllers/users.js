@@ -59,7 +59,7 @@ module.exports.createUser = async (req, res) => {
 };
 
 module.exports.login = async (req, res) => {
-  const { email, password } = JSON.parse(req.body);
+  const { email, password } = req.body;
 
   let user;
   try {
