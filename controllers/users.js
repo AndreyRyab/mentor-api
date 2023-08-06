@@ -1,27 +1,27 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const isEmail = require('validator/lib/isEmail');
 
 const User = require('../models/user');
 
-const BadRequestError = require('../errors/bad-req-err');
-const DBError = require('../errors/db-error');
-const NotFoundError = require('../errors/not-found-err.js');
-const AuthError = require('../errors/auth-err');
-
 const {
   ERROR_BAD_REQUEST_MESSAGE,
+  ERROR_CREDENTIALS_MESSAGE,
   ERROR_EMAIL_EXIST,
-  ERROR_USER_MESSAGE,
   SUCCESS_MESSAGE,
   ERROR_USER_NOT_FOUND,
+  ERROR_COMMON_MESSAGE,
+  EMAIL_REFEXP,
+  ERROR_EMAIL_MESSAGE,
 } = require('../constants');
 
 const { JWT_SECRET } = process.env;
 
 module.exports.createUser = async (req, res) => {
-  if (!isEmail(req.body.email)) {
-    throw new BadRequestError(ERROR_BAD_REQUEST_MESSAGE);
+  const isEmail = EMAIL_REFEXP.test(req.body.email);
+
+  if (!isEmail) {
+    res.status(401).send({ message: ERROR_EMAIL_MESSAGE });
+    return;
   }
 
   const salt = await bcrypt.genSalt(10);
@@ -49,12 +49,15 @@ module.exports.createUser = async (req, res) => {
       });
 
       res.send(newUser);
+    } else {
+      res.status(500).send({ message: ERROR_COMMON_MESSAGE });
     }
   } catch (err) {
-    if (err.name === 'MongoError' && err.code === 11000) {
-      throw new DBError(ERROR_EMAIL_EXIST);
+    if (err.name === 'MongoServerError' && err.code === 11000) {
+      res.status(409).send({ message: ERROR_EMAIL_EXIST });
+      return;
     }
-    throw new Error(err.message);
+    res.status(500).send({ message: ERROR_COMMON_MESSAGE });
   }
 };
 
@@ -66,20 +69,21 @@ module.exports.login = async (req, res) => {
     user = await User.findOne({ email }).select('+password');
   } catch (err) {
     if (err.name === 'CastError') {
-      throw new BadRequestError(ERROR_BAD_REQUEST_MESSAGE);
+      res.status(401).send({ message: ERROR_BAD_REQUEST_MESSAGE });
     }
-
-    throw new Error(err.message);
+    res.status(500).send({ message: ERROR_COMMON_MESSAGE });
   }
 
   if (!user) {
-    throw new NotFoundError(ERROR_USER_NOT_FOUND);
+    res.status(404).send({ message: ERROR_USER_NOT_FOUND });
+    return;
   }
 
   const isPasswordOk = await bcrypt.compare(password, user.password);
 
   if (!isPasswordOk) {
-    throw new AuthError(ERROR_USER_MESSAGE);
+    res.status(401).send({ message: ERROR_CREDENTIALS_MESSAGE });
+    return;
   }
 
   const token = jwt.sign({ _id: user._id }, JWT_SECRET, { expiresIn: '7d' });
@@ -99,7 +103,7 @@ module.exports.getUser = async (req, res) => {
     const user = await User.findById({ _id: req.user._id });
 
     if (!user) {
-      throw new NotFoundError(ERROR_USER_NOT_FOUND);
+      res.status(404).send({ message: ERROR_USER_NOT_FOUND });
     }
 
     const { password, ...userData } = await user.toJSON();
@@ -107,9 +111,9 @@ module.exports.getUser = async (req, res) => {
     res.send(userData);
   } catch (err) {
     if (err.name === 'CastError') {
-      throw new BadRequestError(ERROR_BAD_REQUEST_MESSAGE);
+      res.status(401).send({ message: ERROR_BAD_REQUEST_MESSAGE });
     }
-    throw new Error(err.message);
+    res.status(500).send({ message: ERROR_COMMON_MESSAGE });
   }
 };
 
